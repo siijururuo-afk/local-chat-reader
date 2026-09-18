@@ -20,3 +20,19 @@ export async function removeBook(id: string) {
 }
 export async function loadBlocks(chapterId: string) { return db.blocks.where('chapterId').equals(chapterId).sortBy('index') }
 export async function saveProgress(progress: ReadingProgress) { await db.progress.put(progress) }
+
+export async function repairLibrary(): Promise<number> {
+  const books = await db.books.toArray()
+  let repaired = 0
+  await db.transaction('rw', db.books, db.blocks, async () => {
+    for (const book of books) {
+      if (Array.isArray(book.chapters) && book.chapters.length > 0) continue
+      const chapterId = crypto.randomUUID()
+      const chapter = { id: chapterId, bookId: book.id, index: 0, title: 'Document', blockCount: 1 }
+      await db.blocks.put({ id: crypto.randomUUID(), chapterId, index: 0, text: 'This earlier import contained no readable text. Remove it and re-import the original document.' })
+      await db.books.update(book.id, { chapters: [chapter] })
+      repaired++
+    }
+  })
+  return repaired
+}

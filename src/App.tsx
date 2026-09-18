@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Archive, ArrowUp, Check, ChevronDown, FileText, Menu, Moon, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings, Sun, Trash2, Upload, X } from 'lucide-react'
-import { db, loadBlocks, removeBook, saveBook, saveProgress } from './lib/db'
+import { db, loadBlocks, removeBook, repairLibrary, saveBook, saveProgress } from './lib/db'
 import { materialize } from './lib/book'
 import { parseCommand } from './lib/commands'
 import { parseFile } from './lib/parsers'
@@ -26,8 +26,7 @@ export default function App() {
 
   const refreshBooks = async () => setBooks(await db.books.orderBy('lastOpenedAt').reverse().toArray())
   // IndexedDB is the external source of truth for the local document list.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { void refreshBooks() }, [])
+  useEffect(() => { void repairLibrary().then(refreshBooks) }, [])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey
@@ -39,7 +38,7 @@ export default function App() {
   }, [])
 
   async function openBook(book: Book, targetChapter?: number, targetBlock?: number) {
-    if (!book.chapters.length) {
+    if (!Array.isArray(book.chapters) || !book.chapters.length) {
       setActiveBook(null); setStatus('This import contains no readable chapters. Remove it and re-import the original file.'); return
     }
     const progress = await db.progress.get(book.id)
@@ -62,7 +61,7 @@ export default function App() {
     const file = new File([text], 'demo-document.txt', { type: 'text/plain' }); const created = materialize(parseText(text, 'The Last Document'), file); await saveBook(created.book, created.blocks); await refreshBooks(); await openBook(created.book)
   }
   async function persistProgress() {
-    if (!activeBook || quickHidden) return
+    if (!activeBook || quickHidden || !Array.isArray(activeBook.chapters) || !activeBook.chapters[chapterIndex]) return
     const total = activeBook.chapters.reduce((n, c) => n + c.blockCount, 0), before = activeBook.chapters.slice(0, chapterIndex).reduce((n, c) => n + c.blockCount, 0)
     const p: ReadingProgress = { bookId: activeBook.id, chapterId: activeBook.chapters[chapterIndex].id, blockIndex: Math.max(0, visibleCount - CHUNK), scrollOffset: scroller.current?.scrollTop ?? 0, lastOpenedAt: Date.now(), readingPercentage: Math.min(100, ((before + visibleCount) / total) * 100) }
     await saveProgress(p)
@@ -115,7 +114,7 @@ export default function App() {
       <div className="composer-wrap"><div className="composer">
         <textarea rows={1} aria-label="Message Workspace" placeholder="Message Workspace" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}/>
         <div className="composer-actions"><div className="plus-wrap"><button className="round" onClick={() => setMenu(v => !v)} aria-label="Add"><Plus size={20}/></button>{menu && <div className="plus-menu"><button onClick={() => fileRef.current?.click()}><Upload size={18}/>Upload file</button><button onClick={() => { setActiveBook(null); setMenu(false) }}><Plus size={18}/>New workspace</button></div>}</div><button className="send" disabled={!input.trim()} onClick={submit} aria-label="Send"><ArrowUp size={19}/></button></div>
-      </div><p className="notice">Your documents stay on this device. Workspace can make mistakes.</p></div>
+      </div><p className="notice">Your documents stay on this device. Workspace can make mistakes. · v1.0.1</p></div>
       {status && <button className="toast" onClick={() => setStatus('')}>{busy ? <span className="spinner"/> : <Check size={16}/>} {status}<X size={14}/></button>}
     </main>
     {documents && <div className="overlay" onMouseDown={() => setDocuments(false)}><section className="dialog wide" onMouseDown={e => e.stopPropagation()}><div className="dialog-head"><div><h2>Documents</h2><p>Files available on this device</p></div><button className="icon-btn" onClick={() => setDocuments(false)}><X size={20}/></button></div><div className="doc-list">{books.length === 0 ? <div className="blank-list">No documents yet.</div> : books.map(b => <div className="doc" key={b.id}><FileText size={20}/><div><strong>{b.alias}</strong><span>{new Date(b.lastOpenedAt).toLocaleDateString()} · {(b.size / 1024 / 1024).toFixed(1)} MB</span></div><button onClick={() => void openBook(b)}>Open</button><button aria-label="Rename alias" onClick={async () => { const alias = prompt('Display alias', b.alias); if (alias?.trim()) { await db.books.update(b.id, { alias: alias.trim() }); void refreshBooks() } }}>Rename</button><button className="danger" aria-label="Remove document" onClick={async () => { if (confirm('Remove this local document?')) { await removeBook(b.id); if (activeBook?.id === b.id) setActiveBook(null); void refreshBooks() } }}><Trash2 size={16}/></button></div>)}</div><button className="primary" onClick={() => fileRef.current?.click()}><Upload size={17}/>Import document</button></section></div>}
