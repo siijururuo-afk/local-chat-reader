@@ -32,9 +32,12 @@ export async function parseEpub(file: File): Promise<ParsedBook> {
   const tocMap = new Map(navigation.toc.map((x: any) => [x.href.split('#')[0], x.label.trim()]))
   const chapters: ParsedBook['chapters'] = []
   for (const item of (book.spine as any).spineItems) {
-    const doc = await item.load(book.load.bind(book))
-    const text = (doc.body?.innerText || doc.body?.textContent || '').trim()
-    if (text) chapters.push({ title: tocMap.get(item.href.split('#')[0]) || `Section ${chapters.length + 1}`, blocks: splitParagraphs(text).map(t => ({ text: t })) })
+    const root = await item.load(book.load.bind(book)) as Element
+    const elements = Array.from(root.querySelectorAll?.('h1,h2,h3,h4,h5,h6,p,li,blockquote,pre') ?? [])
+    const texts = elements.map(node => node.textContent?.replace(/\s+/g, ' ').trim() || '').filter(Boolean)
+    const fallback = root.textContent?.replace(/\s+/g, ' ').trim() || ''
+    const blocks = (texts.length ? texts : (fallback ? [fallback] : [])).map(text => ({ text }))
+    if (blocks.length) chapters.push({ title: tocMap.get(item.href.split('#')[0]) || `Section ${chapters.length + 1}`, blocks })
     item.unload()
   }
   book.destroy()
