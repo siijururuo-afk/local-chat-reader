@@ -39,7 +39,12 @@ export default function App() {
   }, [])
 
   async function openBook(book: Book, targetChapter?: number, targetBlock?: number) {
-    const progress = await db.progress.get(book.id), ci = targetChapter ?? Math.max(0, book.chapters.findIndex(c => c.id === progress?.chapterId))
+    if (!book.chapters.length) {
+      setActiveBook(null); setStatus('This import contains no readable chapters. Remove it and re-import the original file.'); return
+    }
+    const progress = await db.progress.get(book.id)
+    const restoredIndex = book.chapters.findIndex(c => c.id === progress?.chapterId)
+    const ci = Math.max(0, Math.min(book.chapters.length - 1, targetChapter ?? (restoredIndex >= 0 ? restoredIndex : 0)))
     setActiveBook(book); setQuickHidden(false); setChapterIndex(ci); setVisibleCount(Math.max(CHUNK, (targetBlock ?? progress?.blockIndex ?? 0) + CHUNK)); setBlocks(await loadBlocks(book.chapters[ci].id)); setDocuments(false)
     const updated = { ...book, lastOpenedAt: Date.now() }; await db.books.put(updated); setActiveBook(updated); void refreshBooks()
     requestAnimationFrame(() => { if (scroller.current) scroller.current.scrollTop = targetBlock ? targetBlock * 70 : (progress?.scrollOffset ?? 0) })

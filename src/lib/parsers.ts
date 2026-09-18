@@ -38,5 +38,5 @@ export async function parseEpub(file: File): Promise<ParsedBook> {
     item.unload()
   }
   book.destroy()
-  return { title: metadata.title || file.name.replace(/\.epub$/i, ''), author: metadata.creator || '', format: 'epub', chapters }
+  return { title: metadata.title || file.name.replace(/\.epub$/i, ''), author: metadata.creator || '', format: 'epub', chapters: chapters.length ? chapters : [{ title: 'Document', blocks: [{ text: 'No readable text was found in this EPUB.' }] }] }
 }
