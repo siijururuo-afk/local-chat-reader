@@ -16,13 +16,17 @@
 
 /* Chat-style desktop proportions. Kept as a compact override layer so the responsive rules stay intact. */
 :root { font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",Arial,sans-serif }
-.sidebar { width:244px; padding:6px 8px }
-.main.shifted { margin-left:244px }
+.sidebar { width:195px; padding:5px 6px }
+.main.shifted { margin-left:195px }
 .brand { gap:9px; padding:6px 8px }
+.brand { font-size:14px }
 .brand-mark { border-radius:8px }
-.nav-item,.history-item { min-height:36px; padding:8px; font-size:14px }
-.history-label { padding:20px 8px 6px }
-header { height:52px; padding:0 12px }
+.nav-item,.history-item { min-height:30px; padding:6px; font-size:12px }
+.history-label { padding:16px 6px 5px; font-size:10px }
+.profile { font-size:12px }
+.profile small { font-size:10px }
+header { height:42px; padding:0 10px }
+.model { font-size:15px }
 .conversation { padding-bottom:210px; scroll-padding-bottom:210px }
 .thread { margin-top:22px; padding-bottom:38px }
 .thread-meta { font-size:12px; line-height:1.5; padding-bottom:20px; margin-bottom:26px }
@@ -30,12 +34,13 @@ header { height:52px; padding:0 12px }
 .assistant p { font-size:inherit }
 .user-message { font-size:16px }
 .continue { margin:28px auto 56px; font-size:14px }
-.composer-wrap { bottom:10px; width:min(768px,calc(100% - 32px)) }
-.composer { height:54px; min-height:54px; border-radius:27px; padding:7px 8px 7px 10px; display:flex; align-items:center; gap:4px; box-shadow:0 2px 12px rgba(0,0,0,.08) }
-.composer textarea { order:2; flex:1; width:auto; height:36px; min-height:36px; padding:7px 42px 5px 4px; font-size:16px; line-height:1.35 }
+.composer-wrap { bottom:8px; width:min(576px,calc(100% - 26px)) }
+.composer { height:44px; min-height:44px; border-radius:22px; padding:5px 7px 5px 8px; display:flex; align-items:center; gap:3px; box-shadow:0 2px 12px rgba(0,0,0,.08) }
+.composer textarea { order:2; flex:1; width:auto; height:30px; min-height:30px; padding:5px 36px 4px 3px; font-size:13px; line-height:1.35 }
 .composer-actions { order:1; display:flex; align-items:center }
 .composer-actions .send { position:absolute; right:9px }
-.round { border:0 }
+.round,.send { width:28px; height:28px; border:0 }
+.round svg,.send svg { width:16px; height:16px }
 .round:hover { background:var(--hover) }
 .notice { margin-top:5px }
 @media(max-width:800px){.main.shifted{margin-left:0}.composer-wrap{bottom:10px}}
