@@ -51,6 +51,11 @@ export default function App() {
   async function changeChapter(next: number) {
     if (!activeBook) return; const ci = Math.max(0, Math.min(activeBook.chapters.length - 1, next)); setChapterIndex(ci); setBlocks(await loadBlocks(activeBook.chapters[ci].id)); setVisibleCount(CHUNK); scroller.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }
+  function continueReading() {
+    if (!activeBook) return
+    if (visibleCount < blocks.length) setVisibleCount(n => Math.min(blocks.length, n + CHUNK))
+    else if (chapterIndex < activeBook.chapters.length - 1) void changeChapter(chapterIndex + 1)
+  }
   async function importFile(file?: File) {
     if (!file) return; setBusy(true); setStatus(`Processing ${file.name} locally…`)
     try { const parsed = await parseFile(file); const created = materialize(parsed, file); await saveBook(created.book, created.blocks); await refreshBooks(); await openBook(created.book); setStatus('Document ready') }
@@ -73,7 +78,7 @@ export default function App() {
   function submit() {
     if (!input.trim()) return; const raw = input.trim(); setInput(''); setUserMessages(m => [...m, raw]); const cmd = parseCommand(raw)
     if (!activeBook) { setStatus('Upload a document to start this local workspace.'); return }
-    if (cmd.type === 'continue') setVisibleCount(n => Math.min(blocks.length, n + CHUNK))
+    if (cmd.type === 'continue') continueReading()
     else if (cmd.type === 'nextChapter') void changeChapter(chapterIndex + 1)
     else if (cmd.type === 'previousChapter') void changeChapter(chapterIndex - 1)
     else if (cmd.type === 'chapter') void changeChapter(Number(cmd.value) - 1)
@@ -108,13 +113,14 @@ export default function App() {
           <div className="thread-meta">{prefs.showRealTitle ? activeBook.title : activeBook.alias}<span> / {activeBook.chapters[chapterIndex]?.title}</span></div>
           {userMessages.slice(-2).map((m, i) => <div className="user-message" key={i}>{m}</div>)}
           <article className="assistant" aria-live="polite">{visible.map(block => <p id={`block-${block.index}`} key={block.id} style={{ marginBottom: prefs.paragraphSpacing }}>{block.text}</p>)}</article>
-          {visibleCount < blocks.length && <button className="continue" onClick={() => setVisibleCount(n => Math.min(blocks.length, n + CHUNK))}>Continue <ChevronDown size={15}/></button>}
+          {(visibleCount < blocks.length || chapterIndex < activeBook.chapters.length - 1) && <button className="continue" onClick={continueReading}>Continue <ChevronDown size={15}/></button>}
+          {visibleCount >= blocks.length && chapterIndex === activeBook.chapters.length - 1 && <p className="document-end">End of document</p>}
         </div>}
       </div>
       <div className="composer-wrap"><div className="composer">
         <textarea rows={1} aria-label="Message Workspace" placeholder="Message Workspace" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}/>
         <div className="composer-actions"><div className="plus-wrap"><button className="round" onClick={() => setMenu(v => !v)} aria-label="Add"><Plus size={20}/></button>{menu && <div className="plus-menu"><button onClick={() => fileRef.current?.click()}><Upload size={18}/>Upload file</button><button onClick={() => { setActiveBook(null); setMenu(false) }}><Plus size={18}/>New workspace</button></div>}</div><button className="send" disabled={!input.trim()} onClick={submit} aria-label="Send"><ArrowUp size={19}/></button></div>
-      </div><p className="notice">Your documents stay on this device. Workspace can make mistakes. · v1.0.3</p></div>
+      </div><p className="notice">Your documents stay on this device. Workspace can make mistakes. · v1.0.4</p></div>
       {status && <button className="toast" onClick={() => setStatus('')}>{busy ? <span className="spinner"/> : <Check size={16}/>} {status}<X size={14}/></button>}
     </main>
     {documents && <div className="overlay" onMouseDown={() => setDocuments(false)}><section className="dialog wide" onMouseDown={e => e.stopPropagation()}><div className="dialog-head"><div><h2>Documents</h2><p>Files available on this device</p></div><button className="icon-btn" onClick={() => setDocuments(false)}><X size={20}/></button></div><div className="doc-list">{books.length === 0 ? <div className="blank-list">No documents yet.</div> : books.map(b => <div className="doc" key={b.id}><FileText size={20}/><div><strong>{b.alias}</strong><span>{new Date(b.lastOpenedAt).toLocaleDateString()} · {(b.size / 1024 / 1024).toFixed(1)} MB</span></div><button onClick={() => void openBook(b)}>Open</button><button aria-label="Rename alias" onClick={async () => { const alias = prompt('Display alias', b.alias); if (alias?.trim()) { await db.books.update(b.id, { alias: alias.trim() }); void refreshBooks() } }}>Rename</button><button className="danger" aria-label="Remove document" onClick={async () => { if (confirm('Remove this local document?')) { await removeBook(b.id); if (activeBook?.id === b.id) setActiveBook(null); void refreshBooks() } }}><Trash2 size={16}/></button></div>)}</div><button className="primary" onClick={() => fileRef.current?.click()}><Upload size={17}/>Import document</button></section></div>}
