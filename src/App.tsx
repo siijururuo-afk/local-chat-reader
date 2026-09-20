@@ -9,9 +9,19 @@ import { parseText } from './lib/text'
 
 const defaultPreferences: UserPreferences = { theme: 'system', fontSize: 16, lineHeight: 1.75, contentWidth: 768, paragraphSpacing: 16, showRealTitle: false }
 const CHUNK = 18
+const APPEARANCE_VERSION = 'chatgpt-v1'
 
 function usePreferences() {
-  const [prefs, setPrefs] = useState<UserPreferences>(() => { try { return { ...defaultPreferences, ...JSON.parse(localStorage.getItem('workspace-preferences') || '{}') } } catch { return defaultPreferences } })
+  const [prefs, setPrefs] = useState<UserPreferences>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('workspace-preferences') || '{}')
+      if (localStorage.getItem('workspace-appearance-version') !== APPEARANCE_VERSION) {
+        localStorage.setItem('workspace-appearance-version', APPEARANCE_VERSION)
+        return { ...defaultPreferences, ...saved, fontSize: 16, lineHeight: 1.75, contentWidth: 768, paragraphSpacing: 16 }
+      }
+      return { ...defaultPreferences, ...saved }
+    } catch { return defaultPreferences }
+  })
   useEffect(() => { localStorage.setItem('workspace-preferences', JSON.stringify(prefs)); const dark = prefs.theme === 'dark' || (prefs.theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.classList.toggle('dark', dark) }, [prefs])
   return [prefs, setPrefs] as const
 }
@@ -120,7 +130,7 @@ export default function App() {
       <div className="composer-wrap"><div className="composer">
         <textarea rows={1} aria-label="Message Workspace" placeholder="Message Workspace" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}/>
         <div className="composer-actions"><div className="plus-wrap"><button className="round" onClick={() => setMenu(v => !v)} aria-label="Add"><Plus size={20}/></button>{menu && <div className="plus-menu"><button onClick={() => fileRef.current?.click()}><Upload size={18}/>Upload file</button><button onClick={() => { setActiveBook(null); setMenu(false) }}><Plus size={18}/>New workspace</button></div>}</div><button className="send" disabled={!input.trim()} onClick={submit} aria-label="Send"><ArrowUp size={19}/></button></div>
-      </div><p className="notice">Your documents stay on this device. Workspace can make mistakes. · v1.0.4</p></div>
+      </div><p className="notice">Your documents stay on this device. Workspace can make mistakes. · v1.0.5</p></div>
       {status && <button className="toast" onClick={() => setStatus('')}>{busy ? <span className="spinner"/> : <Check size={16}/>} {status}<X size={14}/></button>}
     </main>
     {documents && <div className="overlay" onMouseDown={() => setDocuments(false)}><section className="dialog wide" onMouseDown={e => e.stopPropagation()}><div className="dialog-head"><div><h2>Documents</h2><p>Files available on this device</p></div><button className="icon-btn" onClick={() => setDocuments(false)}><X size={20}/></button></div><div className="doc-list">{books.length === 0 ? <div className="blank-list">No documents yet.</div> : books.map(b => <div className="doc" key={b.id}><FileText size={20}/><div><strong>{b.alias}</strong><span>{new Date(b.lastOpenedAt).toLocaleDateString()} · {(b.size / 1024 / 1024).toFixed(1)} MB</span></div><button onClick={() => void openBook(b)}>Open</button><button aria-label="Rename alias" onClick={async () => { const alias = prompt('Display alias', b.alias); if (alias?.trim()) { await db.books.update(b.id, { alias: alias.trim() }); void refreshBooks() } }}>Rename</button><button className="danger" aria-label="Remove document" onClick={async () => { if (confirm('Remove this local document?')) { await removeBook(b.id); if (activeBook?.id === b.id) setActiveBook(null); void refreshBooks() } }}><Trash2 size={16}/></button></div>)}</div><button className="primary" onClick={() => fileRef.current?.click()}><Upload size={17}/>Import document</button></section></div>}
