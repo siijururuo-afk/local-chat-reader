@@ -44,3 +44,17 @@ header { height:42px; padding:0 10px }
 .round:hover { background:var(--hover) }
 .notice { margin-top:5px }
 @media(max-width:800px){.main.shifted{margin-left:0}.composer-wrap{bottom:10px}}
+.header-actions { margin-left:auto; display:flex; align-items:center; gap:13px }
+.header-actions .privacy { margin-left:0 }
+.share-button { display:flex; align-items:center; gap:6px; border:0; border-radius:8px; background:transparent; padding:6px 8px; font-size:12px; line-height:1 }
+.share-button:hover { background:var(--hover) }
+.composer-actions { gap:4px }
+.mic-button { position:absolute; right:43px; display:grid; place-items:center; width:28px; height:28px; border:0; border-radius:50%; background:transparent; color:var(--text) }
+.mic-button:hover { background:var(--hover) }
+.composer textarea { padding-right:72px }
+.send { background:#0d0d0d; color:#fff; transition:background .15s ease,opacity .15s ease }
+.send:not(:disabled):hover { background:#2563eb }
+.send:disabled { background:#b9b9b9; color:#fff; opacity:1 }
+.dark .send:not(:disabled) { background:#f5f5f5; color:#171717 }
+.dark .send:not(:disabled):hover { background:#7ba5ff; color:#111 }
+@media(max-width:800px){.header-actions{gap:2px}.share-button span{display:none}}

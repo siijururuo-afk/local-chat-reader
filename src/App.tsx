@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Archive, ArrowUp, Check, ChevronDown, FileText, Menu, Moon, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings, Sun, Trash2, Upload, X } from 'lucide-react'
+import { Archive, ArrowUp, Check, ChevronDown, FileText, Menu, Mic, Moon, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings, Share2, Sun, Trash2, Upload, X } from 'lucide-react'
 import { db, loadBlocks, removeBook, repairLibrary, saveBook, saveProgress } from './lib/db'
 import { materialize } from './lib/book'
 import { parseCommand } from './lib/commands'
@@ -95,6 +95,12 @@ export default function App() {
     else if (cmd.type === 'search') { setQuery(String(cmd.value)); setSearchOpen(true) }
     else setStatus('AI actions need an optional provider. Reading and search work fully offline.')
   }
+  async function sharePage() {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setStatus('页面链接已复制；本地文档不会随链接分享。')
+    } catch { setStatus('无法复制链接，请从浏览器地址栏复制。') }
+  }
   const results = useMemo(() => {
     const q = query.trim().toLowerCase(); if (!q) return []
     const out: Array<{ book: Book; chapterIndex: number; blockIndex?: number; label: string; excerpt: string }> = []
@@ -117,7 +123,7 @@ export default function App() {
       <button className="profile" onClick={() => setSettings(true)}><span className="avatar">Y</span><span><strong>You</strong><small>Local workspace</small></span><Settings size={17}/></button>
     </aside>
     <main className={sidebar ? 'main shifted' : 'main'}>
-      <header><button className="icon-btn" onClick={() => setSidebar(v => !v)} aria-label="Toggle sidebar">{sidebar ? <Menu size={19}/> : <PanelLeftOpen size={19}/>}</button><button className="model">Workspace <ChevronDown size={15}/></button><div className="privacy"><span></span>Local only</div></header>
+      <header><button className="icon-btn" onClick={() => setSidebar(v => !v)} aria-label="Toggle sidebar">{sidebar ? <Menu size={19}/> : <PanelLeftOpen size={19}/>}</button><button className="model">Workspace <ChevronDown size={15}/></button><div className="header-actions"><div className="privacy"><span></span>Local only</div><button className="share-button" onClick={() => void sharePage()} aria-label="分享页面链接"><Share2 size={16} strokeWidth={1.8}/><span>分享</span></button></div></header>
       <div className="conversation" ref={scroller} onScroll={e => { if (activeBook && e.currentTarget.scrollHeight - e.currentTarget.scrollTop - e.currentTarget.clientHeight < 900) setVisibleCount(n => Math.min(blocks.length, n + CHUNK)) }}>
         {(!activeBook || quickHidden) ? <div className="empty"><div className="spark">✦</div><h1>What can I help with?</h1></div> : <div className="thread" style={{ maxWidth: prefs.contentWidth, fontSize: prefs.fontSize, lineHeight: prefs.lineHeight }}>
           <div className="thread-meta">{prefs.showRealTitle ? activeBook.title : activeBook.alias}<span> / {activeBook.chapters[chapterIndex]?.title}</span></div>
@@ -128,9 +134,9 @@ export default function App() {
         </div>}
       </div>
       <div className="composer-wrap"><div className="composer">
-        <textarea rows={1} aria-label="Message Workspace" placeholder="Message Workspace" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}/>
-        <div className="composer-actions"><div className="plus-wrap"><button className="round" onClick={() => setMenu(v => !v)} aria-label="Add"><Plus size={20}/></button>{menu && <div className="plus-menu"><button onClick={() => fileRef.current?.click()}><Upload size={18}/>Upload file</button><button onClick={() => { setActiveBook(null); setMenu(false) }}><Plus size={18}/>New workspace</button></div>}</div><button className="send" disabled={!input.trim()} onClick={submit} aria-label="Send"><ArrowUp size={19}/></button></div>
-      </div><p className="notice">Your documents stay on this device. Workspace can make mistakes. · v1.0.6</p></div>
+        <textarea rows={1} aria-label="本地文档指令" placeholder="问问本地文档" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}/>
+        <div className="composer-actions"><div className="plus-wrap"><button className="round" onClick={() => setMenu(v => !v)} aria-label="Add"><Plus size={20}/></button>{menu && <div className="plus-menu"><button onClick={() => fileRef.current?.click()}><Upload size={18}/>Upload file</button><button onClick={() => { setActiveBook(null); setMenu(false) }}><Plus size={18}/>New workspace</button></div>}</div><button className="mic-button" type="button" onClick={() => setStatus('当前版本暂不支持语音输入。')} aria-label="语音输入暂不可用"><Mic size={17} strokeWidth={1.9}/></button><button className="send" disabled={!input.trim()} onClick={submit} aria-label="Send"><ArrowUp size={19} strokeWidth={3}/></button></div>
+      </div><p className="notice">仅本地处理文档；此页面不是 ChatGPT 官方服务。· v1.0.7</p></div>
       {status && <button className="toast" onClick={() => setStatus('')}>{busy ? <span className="spinner"/> : <Check size={16}/>} {status}<X size={14}/></button>}
     </main>
     {documents && <div className="overlay" onMouseDown={() => setDocuments(false)}><section className="dialog wide" onMouseDown={e => e.stopPropagation()}><div className="dialog-head"><div><h2>Documents</h2><p>Files available on this device</p></div><button className="icon-btn" onClick={() => setDocuments(false)}><X size={20}/></button></div><div className="doc-list">{books.length === 0 ? <div className="blank-list">No documents yet.</div> : books.map(b => <div className="doc" key={b.id}><FileText size={20}/><div><strong>{b.alias}</strong><span>{new Date(b.lastOpenedAt).toLocaleDateString()} · {(b.size / 1024 / 1024).toFixed(1)} MB</span></div><button onClick={() => void openBook(b)}>Open</button><button aria-label="Rename alias" onClick={async () => { const alias = prompt('Display alias', b.alias); if (alias?.trim()) { await db.books.update(b.id, { alias: alias.trim() }); void refreshBooks() } }}>Rename</button><button className="danger" aria-label="Remove document" onClick={async () => { if (confirm('Remove this local document?')) { await removeBook(b.id); if (activeBook?.id === b.id) setActiveBook(null); void refreshBooks() } }}><Trash2 size={16}/></button></div>)}</div><button className="primary" onClick={() => fileRef.current?.click()}><Upload size={17}/>Import document</button></section></div>}
