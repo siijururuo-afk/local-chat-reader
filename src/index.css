@@ -21,6 +21,7 @@
 .brand { gap:9px; padding:6px 8px }
 .brand { font-size:14px }
 .brand-mark { border-radius:8px }
+.brand-mark.personal-theme-mark { background:transparent; color:var(--text); border-radius:0 }
 .nav-item,.history-item { min-height:30px; padding:6px; font-size:12px }
 .history-label { padding:16px 6px 5px; font-size:10px }
 .profile { font-size:12px }
